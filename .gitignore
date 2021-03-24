@@ -3,3 +3,5 @@ build
 out
 .idea
 .gradle
+
+.file-dialog.properties
