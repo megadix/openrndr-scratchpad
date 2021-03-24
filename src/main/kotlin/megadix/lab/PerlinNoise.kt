@@ -2,13 +2,19 @@ package megadix.lab
 
 import org.openrndr.application
 import org.openrndr.extra.gui.GUI
+import org.openrndr.extra.noise.perlinHermite
 import org.openrndr.extra.noise.perlinLinear
+import org.openrndr.extra.noise.perlinQuintic
 import org.openrndr.extra.olive.oliveProgram
 import org.openrndr.extra.parameters.DoubleParameter
 import org.openrndr.extra.parameters.IntParameter
+import org.openrndr.extra.parameters.OptionParameter
 import org.openrndr.math.map
 
+enum class PerlinVariant { Linear, Quintic, Hermite }
+
 fun main() = application {
+
 
     configure {
         width = 800
@@ -19,11 +25,15 @@ fun main() = application {
         val gui = GUI()
 
         val settings = object {
+            @OptionParameter("Perlin variant")
+            var variant = PerlinVariant.Linear
+
             @IntParameter("Random Seed", 0, 100)
             var randomSeed: Int = 0
 
             @DoubleParameter("amp", 0.001, 100.0)
             var amp: Double = 1.0
+
         };
 
         gui.add(settings, "Settings")
@@ -37,9 +47,14 @@ fun main() = application {
                     0.0, width.toDouble(),
                     0.0, 1.0,
                     i.toDouble()
-                )
-                val y = (
-                        perlinLinear(settings.randomSeed, x * settings.amp)) * halfHeight + halfHeight
+                ) * settings.amp
+
+                val y = when (settings.variant) {
+                    PerlinVariant.Linear -> perlinLinear(settings.randomSeed, x)
+                    PerlinVariant.Quintic -> perlinQuintic(settings.randomSeed, x)
+                    PerlinVariant.Hermite -> perlinHermite(settings.randomSeed, x)
+                } * halfHeight + halfHeight
+
                 drawer.point(i.toDouble(), y)
             }
         }
