@@ -1,20 +1,13 @@
 package megadix.lab
 
-import org.openrndr.KEY_SPACEBAR
 import org.openrndr.application
 import org.openrndr.color.ColorRGBa
-import org.openrndr.extra.gui.GUI
 import org.openrndr.extra.olive.oliveProgram
-import org.openrndr.extra.parameters.DoubleParameter
 import org.openrndr.math.Vector2
 import org.openrndr.shape.Segment
-import org.openrndr.shape.contour
 
 /**
- *  This is a template for a live program.
- *
- *  It uses oliveProgram {} instead of program {}. All code inside the
- *  oliveProgram {} can be changed while the program is running.
+ * Playing with curves.
  */
 
 fun main() = application {
@@ -28,7 +21,6 @@ fun main() = application {
         val points = mutableListOf(
             Vector2(width / 20.0, height / 20.0),
             Vector2(width / 5.0, height / 10.0),
-            Vector2(width / 2.0, height / 2.0),
             Vector2(width - width / 5.0, height - height / 10.0),
             Vector2(width - width / 20.0, height - height / 20.0)
         )
@@ -56,19 +48,14 @@ fun main() = application {
 
             drawer.stroke = ColorRGBa.YELLOW
             drawer.lineSegment(points[0], points[1])
-            drawer.lineSegment(points[1], points[3])
-
+            drawer.lineSegment(points[2], points[3])
 
             val segments = listOf(
                 Segment(
-                    points[0], // start
-                    points[1], // control 1
-                    points[2],  // end
-                ),
-                Segment(
-                    points[3], // start
-                    points[1], // control 1
-                    points[4],  // end
+                    points[0],
+                    points[1],
+                    points[2],
+                    points[3]
                 ),
                 )
 

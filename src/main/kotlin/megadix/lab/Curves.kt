@@ -7,14 +7,10 @@ import org.openrndr.extra.gui.GUI
 import org.openrndr.extra.olive.oliveProgram
 import org.openrndr.extra.parameters.DoubleParameter
 import org.openrndr.math.Vector2
-import org.openrndr.shape.Segment
 import org.openrndr.shape.contour
 
 /**
- *  This is a template for a live program.
- *
- *  It uses oliveProgram {} instead of program {}. All code inside the
- *  oliveProgram {} can be changed while the program is running.
+ * Playing with curves.
  */
 
 fun main() = application {
@@ -30,8 +26,10 @@ fun main() = application {
         val settings = object {
             @DoubleParameter("tangentScale1", 0.001, 5.0)
             var tangentScale1: Double = 1.0
+
             @DoubleParameter("tangentScale2", 0.001, 5.0)
             var tangentScale2: Double = 1.0
+
             @DoubleParameter("tangentScale3", 0.001, 5.0)
             var tangentScale3: Double = 1.0
         };
