@@ -13,6 +13,8 @@ import org.openrndr.color.rgb
 import org.openrndr.draw.ShadeStyle
 import org.openrndr.draw.loadFont
 import org.openrndr.extra.noise.perlinQuintic
+import org.openrndr.ffmpeg.MP4Profile
+import org.openrndr.ffmpeg.ScreenRecorder
 import org.openrndr.math.Vector2
 import org.openrndr.math.map
 import org.openrndr.math.mod
@@ -31,6 +33,7 @@ fun main() = application {
     val static = false
     val debug = false
     val goFullscreen = false
+    val recordVideo = false
 
     val num = 720
     val radiusSize = 0.5
@@ -103,6 +106,12 @@ fun main() = application {
         keyboard.keyDown.listen {
             if (it.key == KEY_SPACEBAR) {
                 curPalette = (curPalette + 1) % palettes.size
+            }
+        }
+
+        if (recordVideo) {
+            extend(ScreenRecorder()) {
+                profile = MP4Profile()
             }
         }
 

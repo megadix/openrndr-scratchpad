@@ -6,3 +6,7 @@ out
 
 .file-dialog.properties
 ShaderError.txt
+
+/video
+ffmpeg.exe
+ffmpegOutput.txt
