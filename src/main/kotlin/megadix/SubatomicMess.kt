@@ -12,6 +12,8 @@ import org.openrndr.color.ColorRGBa.Companion.fromHex
 import org.openrndr.color.rgb
 import org.openrndr.draw.ShadeStyle
 import org.openrndr.draw.loadFont
+import org.openrndr.extra.midi.MidiEvent
+import org.openrndr.extra.midi.MidiTransceiver
 import org.openrndr.extra.noise.perlinQuintic
 import org.openrndr.ffmpeg.MP4Profile
 import org.openrndr.ffmpeg.ScreenRecorder
@@ -24,6 +26,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
+import kotlin.system.exitProcess
 
 fun main() = application {
     val TWO_PI = PI * 2.0
@@ -35,7 +38,9 @@ fun main() = application {
     val goFullscreen = false
     val recordVideo = false
 
-    val num = 720
+    val minNum = 3
+    val maxNum = 1800
+    var num = 360
     val radiusSize = 0.5
 
     val randomSeed = 100
@@ -43,14 +48,56 @@ fun main() = application {
     val minThetaNoiseScale = 10.0
     val maxThetaNoiseScale = 30.0
 
-    val animationDuration = 2000L
+    val minAnimationDuration = 100L
+    val maxAnimationDuration = 10000L
+    var animationDuration = 2000L
     val easing = Easing.SineInOut
 
     // controls how much angles can vary
-    val thetaNoiseAmp = PI / 2.0
+    val minThetaNoiseAmp = 0.0
+    val maxThetaNoiseAmp = PI * 2.0
+    var thetaNoiseAmp = PI / 2.0
+
     // controls how much radius can vary
-    val radiusNoiseAmp = 100.0
-    val centerNoiseAmp = 30.0
+    val minRadiusNoiseAmp = 0.0
+    val maxRadiusNoiseAmp = 500.0
+    var radiusNoiseAmp = 100.0
+
+    val minCenterNoiseAmp = 0.0
+    val maxCenterNoiseAmp = 200.0
+    var centerNoiseAmp = 30.0
+
+    // NOTE: the following are MY default values for MIDI, plu-in your own to make it work or disable MIDI
+    val midiEnabled = true
+
+    val midiCc1 = 70
+    val midiCc2 = 71
+    val midiCc3 = 72
+    val midiCc4 = 73
+    val midiCc5 = 74
+    val midiCc6 = 75
+    val midiCc7 = 76
+    val midiCc8 = 77
+
+    val pad1note = 40
+    val pad2note = 41
+    val pad3note = 42
+    val pad4note = 43
+    val pad5note = 36
+    val pad6note = 37
+    val pad7note = 38
+    val pad8note = 39
+
+    val midiController: MidiTransceiver? = if (midiEnabled)
+        MidiTransceiver.fromDeviceVendor(
+            "MPK mini 3",
+            "Unknown vendor"
+        )
+    else null
+
+    /* ----------------------------------------
+     * Main application
+     * ---------------------------------------- */
 
     configure {
         if (goFullscreen) {
@@ -88,6 +135,10 @@ fun main() = application {
             listOf("e63946", "e63946", "a8dadc", "1d3557", "1d3557"),
             listOf("dd1c1a", "fff1d0", "f0c808", "086788", "06aed5"),
             listOf("ff0000", "99ff00", "00ff99", "0099ff", "0000ff"),
+            listOf("264653", "2a9d8f", "e9c46a", "f4a261", "e76f51"),
+            listOf("000000", "14213d", "fca311", "e5e5e5", "ffffff"),
+            listOf("d9ed92", "b5e48c", "99d98c", "76c893", "52b69a", "34a0a4", "168aad", "1a759f", "1e6091", "184e77"),
+            listOf("ff0a54", "ff477e", "ff5c8a", "ff7096", "ff85a1", "ff99ac", "fbb1bd", "f9bec7", "f7cad0", "fae0e4"),
         )
 
         var curPalette = 0
@@ -102,10 +153,61 @@ fun main() = application {
             gradient
         }
 
-        // cycle palettes using spacebar
-        keyboard.keyDown.listen {
-            if (it.key == KEY_SPACEBAR) {
-                curPalette = (curPalette + 1) % palettes.size
+        if (midiEnabled) {
+            fun newValue(evt: MidiEvent, min: Number, max: Number): Double {
+                return map(
+                    0.0, 127.0,
+                    min.toDouble(), max.toDouble(),
+                    evt.value.toDouble(),
+                    true
+                )
+            }
+
+            /*
+             * Control Change (CC)
+             */
+            midiController!!.controlChanged.listen { evt ->
+                when (evt.control) {
+                    // num of lines using control change 1
+                    midiCc1 -> num = newValue(evt, minNum, maxNum).toInt()
+                    // thetaNoiseAmp using control change 5
+                    midiCc5 -> thetaNoiseAmp = newValue(evt, maxThetaNoiseAmp, minThetaNoiseAmp)
+                    // radiusNoiseAmp using control change 6
+                    midiCc6 -> radiusNoiseAmp = newValue(evt, minRadiusNoiseAmp, maxRadiusNoiseAmp)
+                    // centerNoiseAmp using control change 7
+                    midiCc7 -> centerNoiseAmp = newValue(evt, minCenterNoiseAmp, maxCenterNoiseAmp)
+                }
+            }
+
+            /*
+             * Control Change (CC)
+             */
+
+            val paletteNotesMap = mapOf(
+                pad1note to 0,
+                pad2note to 1,
+                pad3note to 2,
+                pad4note to 3,
+                pad5note to 4,
+                pad6note to 5,
+                pad7note to 6,
+                pad8note to 7,
+            )
+
+            midiController.noteOn.listen { evt ->
+                curPalette = paletteNotesMap.getOrDefault(evt.note, curPalette)
+            }
+
+            ended.listen {
+                exitProcess(0)
+            }
+
+        } else {
+            // cycle palettes using spacebar
+            keyboard.keyDown.listen {
+                if (it.key == KEY_SPACEBAR) {
+                    curPalette = (curPalette + 1) % palettes.size
+                }
             }
         }
 
@@ -136,8 +238,9 @@ fun main() = application {
             val thetaNoiseScale = map(
                 0.0, width.toDouble(),
                 minThetaNoiseScale, maxThetaNoiseScale,
-                animation.noiseParam
-            ).coerceAtLeast(minThetaNoiseScale).coerceAtMost(maxThetaNoiseScale)
+                animation.noiseParam,
+                true
+            )
 
             val thetaIncr = TWO_PI / num
             var theta = 0.0
