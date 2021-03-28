@@ -7,6 +7,7 @@ import org.openrndr.panel.ControlManager
 import org.openrndr.panel.elements.dropdownButton
 import org.openrndr.panel.elements.item
 import org.openrndr.panel.layout
+import kotlin.system.exitProcess
 
 
 fun main(args: Array<String>) = application {
@@ -33,6 +34,10 @@ fun main(args: Array<String>) = application {
                             label = "Choose MIDI input devices"
 
                             MidiDeviceDescription.list()
+                                .map {
+                                    println(it)
+                                    it
+                                }
                                 .filter { it.transmit }
                                 .forEachIndexed() { i, device ->
                                     item {
@@ -94,6 +99,10 @@ fun main(args: Array<String>) = application {
         if (midiController == null) {
             application.exit()
         } else {
+            ended.listen {
+                exitProcess(0)
+            }
+
             midiController!!.controlChanged.listen {
                 println("control change: channel: ${it.channel}, control: ${it.control}, value: ${it.value}")
             }

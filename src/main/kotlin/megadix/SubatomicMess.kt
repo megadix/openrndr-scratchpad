@@ -7,9 +7,11 @@ import org.openrndr.animatable.Animatable
 import org.openrndr.animatable.easing.Easing
 import org.openrndr.application
 import org.openrndr.color.ColorRGBa
+import org.openrndr.color.ColorRGBa.Companion.BLACK
 import org.openrndr.color.ColorRGBa.Companion.WHITE
 import org.openrndr.color.ColorRGBa.Companion.fromHex
-import org.openrndr.color.rgb
+import org.openrndr.draw.BlendMode
+import org.openrndr.draw.LineCap
 import org.openrndr.draw.ShadeStyle
 import org.openrndr.draw.loadFont
 import org.openrndr.extra.midi.MidiEvent
@@ -22,10 +24,7 @@ import org.openrndr.math.map
 import org.openrndr.math.mod
 import org.openrndr.shape.contour
 import org.openrndr.text.writer
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.min
-import kotlin.math.sin
+import kotlin.math.*
 import kotlin.system.exitProcess
 
 fun main() = application {
@@ -43,13 +42,19 @@ fun main() = application {
     var num = 360
     val radiusSize = 0.5
 
+    val minAlphaMod = 1.0
+    val maxAlphaMod = 0.3
+    var alphaMod = 0.01
+
+    val minStrokeWeight = 0.5
+    val maxStrokeWeight = 10.0
+    var strokeWeight = 1.0
+
     val randomSeed = 100
 
     val minThetaNoiseScale = 10.0
     val maxThetaNoiseScale = 30.0
 
-    val minAnimationDuration = 100L
-    val maxAnimationDuration = 10000L
     var animationDuration = 2000L
     val easing = Easing.SineInOut
 
@@ -67,31 +72,47 @@ fun main() = application {
     val maxCenterNoiseAmp = 200.0
     var centerNoiseAmp = 30.0
 
-    // NOTE: the following are MY default values for MIDI, plu-in your own to make it work or disable MIDI
+    // NOTE: the following are MY default values for MIDI, plug-in your own to make it work or disable MIDI
     val midiEnabled = true
 
     val midiCc1 = 70
     val midiCc2 = 71
     val midiCc3 = 72
-    val midiCc4 = 73
     val midiCc5 = 74
     val midiCc6 = 75
     val midiCc7 = 76
-    val midiCc8 = 77
 
-    val pad1note = 40
-    val pad2note = 41
-    val pad3note = 42
-    val pad4note = 43
-    val pad5note = 36
-    val pad6note = 37
-    val pad7note = 38
-    val pad8note = 39
+    val palettes = listOf(
+        listOf("d00000", "d00000", "ffba08", "4cc9f0", "4cc9f0", "ff006e"),
+        listOf("e63946", "e63946", "a8dadc", "1d3557", "1d3557"),
+        listOf("dd1c1a", "fff1d0", "f0c808", "086788", "06aed5"),
+        listOf("ff0000", "99ff00", "00ff99", "0099ff", "0000ff"),
+    )
+
+    var curPalette = 0
+
+    // map MIDI notes (pads) to palette indexes
+    val paletteNotesMap = mapOf(
+        40 to 0,
+        41 to 1,
+        42 to 2,
+        43 to 3,
+    )
+
+    var curBlendMode = BlendMode.ADD
+
+    val blendModesNotesMap = mapOf(
+        36 to BlendMode.ADD,
+        37 to BlendMode.BLEND,
+        38 to BlendMode.OVER,
+        39 to BlendMode.REPLACE,
+    )
 
     val midiController: MidiTransceiver? = if (midiEnabled)
         MidiTransceiver.fromDeviceVendor(
-            "MPK mini 3",
-            "Unknown vendor"
+            "MPK mini 3", "Unknown vendor"
+//            "loopMIDI Port", "Unknown vendor"
+
         )
     else null
 
@@ -105,6 +126,7 @@ fun main() = application {
         } else {
             width = 1080
             height = 600
+            windowResizable = true
         }
     }
 
@@ -129,19 +151,6 @@ fun main() = application {
         val animation = object : Animatable() {
             var noiseParam: Double = minThetaNoiseScale
         }
-
-        val palettes = listOf(
-            listOf("d00000", "d00000", "ffba08", "4cc9f0", "4cc9f0", "ff006e"),
-            listOf("e63946", "e63946", "a8dadc", "1d3557", "1d3557"),
-            listOf("dd1c1a", "fff1d0", "f0c808", "086788", "06aed5"),
-            listOf("ff0000", "99ff00", "00ff99", "0099ff", "0000ff"),
-            listOf("264653", "2a9d8f", "e9c46a", "f4a261", "e76f51"),
-            listOf("000000", "14213d", "fca311", "e5e5e5", "ffffff"),
-            listOf("d9ed92", "b5e48c", "99d98c", "76c893", "52b69a", "34a0a4", "168aad", "1a759f", "1e6091", "184e77"),
-            listOf("ff0a54", "ff477e", "ff5c8a", "ff7096", "ff85a1", "ff99ac", "fbb1bd", "f9bec7", "f7cad0", "fae0e4"),
-        )
-
-        var curPalette = 0
 
         val gradients = palettes.map { palette ->
             val gradient = NPointLinearStrokeGradient(palette.map(::fromHex).toTypedArray())
@@ -170,8 +179,12 @@ fun main() = application {
                 when (evt.control) {
                     // num of lines using control change 1
                     midiCc1 -> num = newValue(evt, minNum, maxNum).toInt()
+                    // stroke weight using control change 2
+                    midiCc2 -> strokeWeight = newValue(evt, minStrokeWeight, maxStrokeWeight)
+                    // alpha mod using control change 3
+                    midiCc3 -> alphaMod = newValue(evt, minAlphaMod, maxAlphaMod)
                     // thetaNoiseAmp using control change 5
-                    midiCc5 -> thetaNoiseAmp = newValue(evt, maxThetaNoiseAmp, minThetaNoiseAmp)
+                    midiCc5 -> thetaNoiseAmp = newValue(evt, minThetaNoiseAmp, maxThetaNoiseAmp)
                     // radiusNoiseAmp using control change 6
                     midiCc6 -> radiusNoiseAmp = newValue(evt, minRadiusNoiseAmp, maxRadiusNoiseAmp)
                     // centerNoiseAmp using control change 7
@@ -183,19 +196,9 @@ fun main() = application {
              * Control Change (CC)
              */
 
-            val paletteNotesMap = mapOf(
-                pad1note to 0,
-                pad2note to 1,
-                pad3note to 2,
-                pad4note to 3,
-                pad5note to 4,
-                pad6note to 5,
-                pad7note to 6,
-                pad8note to 7,
-            )
-
             midiController.noteOn.listen { evt ->
                 curPalette = paletteNotesMap.getOrDefault(evt.note, curPalette)
+                curBlendMode = blendModesNotesMap.getOrDefault(evt.note, curBlendMode)
             }
 
             ended.listen {
@@ -222,7 +225,9 @@ fun main() = application {
          */
 
         extend {
-            drawer.clear(rgb(0.1))
+            drawer.clear(BLACK)
+            drawer.lineCap = LineCap.ROUND
+            drawer.drawStyle.blendMode = curBlendMode
 
             animation.updateAnimation()
 
@@ -337,20 +342,20 @@ fun main() = application {
                 gradient.rotation = theta
                 drawer.shadeStyle = gradient
 
-                val alphaMod = map(
+                val alpha = map(
                     -1.0, 1.0,
                     0.1, 2.0,
                     sin(seconds / 3.0)
                 )
                 drawer.stroke = WHITE.opacify(
-                    perlinQuintic(randomSeed, thetaNoiseParam * alphaMod)
+                    perlinQuintic(randomSeed, thetaNoiseParam * alpha).pow(alphaMod)
                 )
+                drawer.strokeWeight = strokeWeight
                 drawer.contour(c)
 
                 if (debug) {
                     writer {
                         newLine()
-//                        text("alphaMod: $alphaMod")
                         text("curPalette = $curPalette")
                     }
                 }
