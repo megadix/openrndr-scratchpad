@@ -13,7 +13,7 @@ import kotlin.system.exitProcess
 fun main(args: Array<String>) = application {
 
     val settings = object {
-        // NOTE: these are MY default values, plu-in your own to skip configuration dialog!
+        // NOTE: these are MY default values, plug-in your own to skip configuration dialog!
         var midiDevice: MidiDeviceDescription? = MidiDeviceDescription(
             name = "MPK mini 3", vendor = "Unknown vendor",
             receive = true, transmit = true
