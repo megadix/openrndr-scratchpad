@@ -5,8 +5,8 @@ import org.openrndr.application
 import org.openrndr.color.ColorRGBa.Companion.RED
 import org.openrndr.color.ColorRGBa.Companion.TRANSPARENT
 import org.openrndr.extra.noclear.NoClear
-import org.openrndr.extra.noise.fbm
 import org.openrndr.extra.noise.perlinLinear
+import org.openrndr.extra.olive.oliveProgram
 import org.openrndr.math.Vector2
 import kotlin.math.abs
 import kotlin.random.Random
@@ -27,7 +27,7 @@ fun main() = application {
 
     val drops = mutableListOf<Vector2>()
 
-    program {
+    oliveProgram {
         drawer.clear(TRANSPARENT)
 
         mouse.dragged.listen {
@@ -50,7 +50,7 @@ fun main() = application {
                 drawer.stroke = RED
                 drawer.fill = RED
 
-                val noiseX = fbm(iterator.nextIndex(), drop.y, ::perlinLinear)
+                val noiseX = perlinLinear(iterator.nextIndex(), drop.y)
 
                 if (drop.y < height.toDouble()) {
                     drawer.circle(drop, (abs(noiseX) + 1.0) * 2.0)
@@ -58,7 +58,7 @@ fun main() = application {
 
                 iterator.set(
                     Vector2(
-                        drop.x + noiseX * 1.4,
+                        drop.x + noiseX * 3.0,
                         drop.y + 0.5
                     )
                 )
