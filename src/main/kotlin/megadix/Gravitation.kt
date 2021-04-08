@@ -77,12 +77,23 @@ fun main(args: Array<String>) = application {
 
     val useDefaults = args.isNotEmpty() && args.any { it.contains("(-d)|(--defaults)".toRegex()) }
 
-    fun newBody(position: Vector2, velocity: Vector2): Body {
+    fun newBody(): Body {
         val mass = random.nextDouble(minMass, maxMass)
+
+        val position = Polar(
+            random.nextDouble(0.0, 360.0),
+            random.nextDouble(maxPosition),
+        )
+        val positionCartesian = position.cartesian
+
+        val velocity = Polar(
+            position.theta + 90.0,
+            map(0.0, maxPosition, 0.0, maxInitVelocity, position.radius, true)
+        ).cartesian
 
         return Body(
             mass,
-            position,
+            positionCartesian,
             velocity,
             color = ColorXSVa(
                 random.nextDouble(0.0, 360.0),
@@ -93,24 +104,7 @@ fun main(args: Array<String>) = application {
     }
 
     fun initBodies(): MutableList<Body> {
-        return (1..numInitBodies).map {
-            val position = Polar(
-                random.nextDouble(0.0, 360.0),
-                random.nextDouble(maxPosition),
-            )
-            val positionCartesian = position.cartesian
-
-            /*val velocity = Vector2(
-                -positionCartesian.y,
-                positionCartesian.x,
-            ).normalized * random.nextDouble(maxInitVelocity)*/
-            val velocity = Polar(
-                position.theta + 90.0,
-                map(0.0, maxPosition, 0.0, maxInitVelocity, position.radius, true)
-            ).cartesian
-
-            newBody(positionCartesian, velocity)
-        }.toMutableList()
+        return (1..numInitBodies).map { newBody() }.toMutableList()
     }
 
     fun addGravitationalForce(body1: Body, body2: Body, soften: Double) {
@@ -174,8 +168,9 @@ fun main(args: Array<String>) = application {
                 val it = iter.next()
 
                 if (it.position.length > tooFar) {
-                    logger.debug { "Removed body - too far" }
+                    logger.debug { "Removed body too far" }
                     iter.remove()
+                    iter.add(newBody())
                 }
 
                 // draw current state of the system
