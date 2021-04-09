@@ -31,9 +31,9 @@ val maxMass = SOLARMASS * 10.0.pow(3)
 val blackHoleMass = maxMass * 10.0.pow(3)
 
 // max distance from the center of the universe at the start of simulation
-val maxPosition = 10.0.pow(9)
-val screenZoom = maxPosition * 3.0
-val tooFar = maxPosition * 3.0
+val maxInitDistance = 10.0.pow(9)
+val screenZoom = maxInitDistance * 3.0
+val tooFar = maxInitDistance * 3.0
 
 const val centralBlackHole = true
 //const val centralBlackHole = false
@@ -82,13 +82,13 @@ fun main(args: Array<String>) = application {
 
         val position = Polar(
             random.nextDouble(0.0, 360.0),
-            random.nextDouble(maxPosition),
+            random.nextDouble(maxInitDistance),
         )
         val positionCartesian = position.cartesian
 
         val velocity = Polar(
             position.theta + 90.0,
-            map(0.0, maxPosition, 0.0, maxInitVelocity, position.radius, true)
+            map(0.0, maxInitDistance, 0.0, maxInitVelocity, position.radius, true)
         ).cartesian
 
         return Body(
@@ -118,7 +118,7 @@ fun main(args: Array<String>) = application {
         body1.force = ZERO
 
         for (body2 in bodies) {
-            if (body1 != body2) {
+            if (body1 !== body2) {
                 addGravitationalForce(body1, body2, soften)
             }
         }
