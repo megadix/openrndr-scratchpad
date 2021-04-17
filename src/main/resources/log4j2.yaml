@@ -19,3 +19,9 @@ Configuration:
       AppenderRef:
         - ref: Console_Info
         - ref: File_Appender
+    Logger:
+      - name: megadix
+        additivity: false
+        level: info
+        AppenderRef:
+          - ref: Console_Info
