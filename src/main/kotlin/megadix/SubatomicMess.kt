@@ -1,5 +1,6 @@
 package megadix
 
+import mu.KotlinLogging
 import org.openrndr.Fullscreen
 import org.openrndr.KEY_SPACEBAR
 import org.openrndr.PresentationMode
@@ -28,6 +29,8 @@ import kotlin.math.*
 import kotlin.system.exitProcess
 
 fun main() = application {
+    val logger = KotlinLogging.logger {}
+
     val TWO_PI = PI * 2.0
 
     // parameters
@@ -38,7 +41,7 @@ fun main() = application {
     val recordVideo = false
 
     val minNum = 3
-    val maxNum = 1800
+    val maxNum = 3600
     var num = 360
     val radiusSize = 0.5
 
@@ -75,6 +78,7 @@ fun main() = application {
     // NOTE: the following are MY default values for MIDI, plug-in your own to make it work or disable MIDI
     val midiEnabled = true
 
+    val midiCCChannel = 0
     val midiCc1 = 70
     val midiCc2 = 71
     val midiCc3 = 72
@@ -92,6 +96,7 @@ fun main() = application {
     var curPalette = 0
 
     // map MIDI notes (pads) to palette indexes
+    val midiPadsChannel = 9
     val paletteNotesMap = mapOf(
         40 to 0,
         41 to 1,
@@ -101,18 +106,10 @@ fun main() = application {
 
     var curBlendMode = BlendMode.ADD
 
-    val blendModesNotesMap = mapOf(
-        36 to BlendMode.ADD,
-        37 to BlendMode.BLEND,
-        38 to BlendMode.OVER,
-        39 to BlendMode.REPLACE,
-    )
-
     val midiController: MidiTransceiver? = if (midiEnabled)
         MidiTransceiver.fromDeviceVendor(
             "MPK mini 3", "Unknown vendor"
-//            "loopMIDI Port", "Unknown vendor"
-
+//            "loopMIDI Port 2", "Unknown vendor"
         )
     else null
 
@@ -176,29 +173,35 @@ fun main() = application {
              * Control Change (CC)
              */
             midiController!!.controlChanged.listen { evt ->
-                when (evt.control) {
-                    // num of lines using control change 1
-                    midiCc1 -> num = newValue(evt, minNum, maxNum).toInt()
-                    // stroke weight using control change 2
-                    midiCc2 -> strokeWeight = newValue(evt, minStrokeWeight, maxStrokeWeight)
-                    // alpha mod using control change 3
-                    midiCc3 -> alphaMod = newValue(evt, minAlphaMod, maxAlphaMod)
-                    // thetaNoiseAmp using control change 5
-                    midiCc5 -> thetaNoiseAmp = newValue(evt, minThetaNoiseAmp, maxThetaNoiseAmp)
-                    // radiusNoiseAmp using control change 6
-                    midiCc6 -> radiusNoiseAmp = newValue(evt, minRadiusNoiseAmp, maxRadiusNoiseAmp)
-                    // centerNoiseAmp using control change 7
-                    midiCc7 -> centerNoiseAmp = newValue(evt, minCenterNoiseAmp, maxCenterNoiseAmp)
+                logger.debug { "Received MIDI CC event: $evt"}
+
+                if (evt.channel == midiCCChannel) {
+                    when (evt.control) {
+                        // num of lines using control change 1
+                        midiCc1 -> num = newValue(evt, minNum, maxNum).toInt()
+                        // stroke weight using control change 2
+                        midiCc2 -> strokeWeight = newValue(evt, minStrokeWeight, maxStrokeWeight)
+                        // alpha mod using control change 3
+                        midiCc3 -> alphaMod = newValue(evt, minAlphaMod, maxAlphaMod)
+                        // thetaNoiseAmp using control change 5
+                        midiCc5 -> thetaNoiseAmp = newValue(evt, minThetaNoiseAmp, maxThetaNoiseAmp)
+                        // radiusNoiseAmp using control change 6
+                        midiCc6 -> radiusNoiseAmp = newValue(evt, minRadiusNoiseAmp, maxRadiusNoiseAmp)
+                        // centerNoiseAmp using control change 7
+                        midiCc7 -> centerNoiseAmp = newValue(evt, minCenterNoiseAmp, maxCenterNoiseAmp)
+                    }
                 }
             }
 
             /*
-             * Control Change (CC)
+             * MIDI Note On
              */
 
             midiController.noteOn.listen { evt ->
-                curPalette = paletteNotesMap.getOrDefault(evt.note, curPalette)
-                curBlendMode = blendModesNotesMap.getOrDefault(evt.note, curBlendMode)
+                logger.debug { "Received MIDI Note On event: $evt"}
+                if (evt.channel == midiPadsChannel) {
+                    curPalette = paletteNotesMap.getOrDefault(evt.note, curPalette)
+                }
             }
 
             ended.listen {
