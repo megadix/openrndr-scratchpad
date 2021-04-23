@@ -15,7 +15,8 @@ fun main(args: Array<String>) = application {
     val settings = object {
         // NOTE: these are MY default values, plug-in your own to skip configuration dialog!
         var midiDevice: MidiDeviceDescription? = MidiDeviceDescription(
-            name = "MPK mini 3", vendor = "Unknown vendor",
+//            name = "MPK mini 3", vendor = "Unknown vendor",
+            name = "loopMIDI Port 1", vendor = "Unknown vendor",
             receive = true, transmit = true
         )
     }
