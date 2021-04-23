@@ -77,8 +77,13 @@ fun main() = application {
 
     // NOTE: the following are MY default values for MIDI, plug-in your own to make it work or disable MIDI
     val midiEnabled = true
+    val midiDeviceName = "MPK mini 3"
+//    val midiDeviceName = "loopMIDI Port 2"
+    val midiDeviceVendor = "Unknown vendor"
 
     val midiCCChannel = 0
+    val midiPadsChannel = 9
+
     val midiCc1 = 70
     val midiCc2 = 71
     val midiCc3 = 72
@@ -93,10 +98,8 @@ fun main() = application {
         listOf("ff0000", "99ff00", "00ff99", "0099ff", "0000ff"),
     )
 
-    var curPalette = 0
+    var curPaletteIdx = 0
 
-    // map MIDI notes (pads) to palette indexes
-    val midiPadsChannel = 9
     val paletteNotesMap = mapOf(
         40 to 0,
         41 to 1,
@@ -107,10 +110,7 @@ fun main() = application {
     var curBlendMode = BlendMode.ADD
 
     val midiController: MidiTransceiver? = if (midiEnabled)
-        MidiTransceiver.fromDeviceVendor(
-            "MPK mini 3", "Unknown vendor"
-//            "loopMIDI Port 2", "Unknown vendor"
-        )
+        MidiTransceiver.fromDeviceVendor(midiDeviceName, midiDeviceVendor)
     else null
 
     /* ----------------------------------------
@@ -173,7 +173,7 @@ fun main() = application {
              * Control Change (CC)
              */
             midiController!!.controlChanged.listen { evt ->
-                logger.debug { "Received MIDI CC event: $evt"}
+                logger.debug { "Received MIDI CC event: $evt" }
 
                 if (evt.channel == midiCCChannel) {
                     when (evt.control) {
@@ -198,9 +198,9 @@ fun main() = application {
              */
 
             midiController.noteOn.listen { evt ->
-                logger.debug { "Received MIDI Note On event: $evt"}
+                logger.debug { "Received MIDI Note On event: $evt" }
                 if (evt.channel == midiPadsChannel) {
-                    curPalette = paletteNotesMap.getOrDefault(evt.note, curPalette)
+                    curPaletteIdx = paletteNotesMap.getOrDefault(evt.note, curPaletteIdx)
                 }
             }
 
@@ -212,7 +212,7 @@ fun main() = application {
             // cycle palettes using spacebar
             keyboard.keyDown.listen {
                 if (it.key == KEY_SPACEBAR) {
-                    curPalette = (curPalette + 1) % palettes.size
+                    curPaletteIdx = (curPaletteIdx + 1) % palettes.size
                 }
             }
         }
@@ -341,7 +341,7 @@ fun main() = application {
                     continueTo(points[3], points[4])
                 }
 
-                val gradient = gradients[curPalette]
+                val gradient = gradients[curPaletteIdx]
                 gradient.rotation = theta
                 drawer.shadeStyle = gradient
 
@@ -359,7 +359,7 @@ fun main() = application {
                 if (debug) {
                     writer {
                         newLine()
-                        text("curPalette = $curPalette")
+                        text("curPalette = $curPaletteIdx")
                     }
                 }
 
