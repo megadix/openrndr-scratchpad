@@ -10,3 +10,4 @@ ShaderError.txt
 /video
 ffmpeg.exe
 ffmpegOutput.txt
+*.rpp-bak
